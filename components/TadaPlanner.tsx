@@ -204,59 +204,90 @@ export default function TadaPlanner() {
     }
   };
 
-  const handleNextQuestion = async () => {
-    if (!currentInput.trim()) return;
+ const handleNextQuestion = async () => {
+   if (!currentInput.trim()) return;
 
-    const currentQ = questionsList[questionIndex];
-    const updatedAnswers = { ...answers, [currentQ.id]: currentInput.trim() };
-    setAnswers(updatedAnswers);
+   const currentQ = questionsList[questionIndex];
+   const updatedAnswers = { ...answers, [currentQ.id]: currentInput.trim() };
+   setAnswers(updatedAnswers);
 
-    if (questionIndex < questionsList.length - 1) {
-      setQuestionIndex(questionIndex + 1);
-      const nextQ = questionsList[questionIndex + 1];
-      setCurrentInput(updatedAnswers[nextQ.id] || "");
-    } else {
-      setStep("thinking");
+   if (questionIndex < questionsList.length - 1) {
+     setQuestionIndex(questionIndex + 1);
+     const nextQ = questionsList[questionIndex + 1];
+     setCurrentInput(updatedAnswers[nextQ.id] || "");
+   } else {
+     setStep("thinking");
 
-      try {
-        const res = await fetch("/api/generate-questions", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            idea: ideaText.trim(),
-            occasion: selectedPill,
-            answers: updatedAnswers,
-          }),
-        });
+     try {
+       const res = await fetch("/api/generate-questions", {
+         method: "POST",
+         headers: { "Content-Type": "application/json" },
+         body: JSON.stringify({
+           idea: ideaText.trim(),
+           occasion: selectedPill,
+           answers: updatedAnswers,
+         }),
+       });
 
-        const data = await res.json();
+       const data = await res.json();
 
-        if (data && data.questions && data.questions.length > 0) {
-          setQuestionsList(data.questions);
-          setQuestionIndex(0);
-          setCurrentInput("");
-          setStep("question");
-        } else {
-          setStep("ready");
-        }
-      } catch (err) {
-        console.error(err);
-        setStep("ready");
-      }
-    }
-  };
+       // If backend returns more questions or triggers the final plan readiness
+       if (data && data.questions && data.questions.length > 0) {
+         setQuestionsList(data.questions);
+         setQuestionIndex(0);
+         setCurrentInput("");
+         setStep("question");
+       } else {
+         setStep("ready");
+       }
+     } catch (err) {
+       console.error(err);
+       setStep("ready");
+     }
+   }
+ };
+ const handleCreatePlan = async () => {
+   setStep("thinking");
+   try {
+     const res = await fetch("/api/create-plan", {
+       method: "POST",
+       headers: { "Content-Type": "application/json" },
+       body: JSON.stringify({
+         idea: ideaText.trim(),
+         occasion: selectedPill,
+         answers,
+       }),
+     });
 
-  const handleCreatePlan = () => {
-    setStep("thinking");
-    setTimeout(() => {
-      setPlanData({
-        city: answers["location"] || "Your City",
-        budget: answers["budget"] || "Flexible",
-        total: "₹17,500",
-      });
-      setStep("plan");
-    }, 2050);
-  };
+     const data = await res.json();
+
+     if (res.ok && data) {
+       // Map backend response into planData state
+       setPlanData({
+         city: data.city || answers["location"] || "Hyderabad",
+         budget: data.budget || "₹20,000",
+         total: data.total || "₹17,500",
+       });
+
+       // If your API returns custom items, you can update activeOcc or store them in state:
+       if (data.items) {
+         OCCURRENCES[selectedPill] = {
+           ...activeOcc,
+           title: data.title || activeOcc.title,
+           items: data.items,
+         };
+       }
+
+       setStep("plan");
+     } else {
+       console.error("Failed to create plan:", data.error);
+       setStep("ready");
+     }
+   } catch (err) {
+     console.error("Network error while creating plan:", err);
+     setStep("ready");
+   }
+ };
 
   return (
     <section className="w-[min(1240px,calc(100%-80px))] mx-auto py-11 md:py-[44px] pb-[100px] grid grid-cols-1 md:grid-cols-[0.72fr_1.28fr] gap-[84px] items-start">
