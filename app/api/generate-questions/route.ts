@@ -7,6 +7,50 @@ export async function POST(req: Request) {
   try {
     const { idea, occasion, answers } = await req.json();
 
+    // 1. LOCAL DEBUG FLAG BYPASS
+    if (process.env.DEBUG_MOCK_AI === "true") {
+      console.log(
+        "🛠️ [DEBUG MODE] Bypassing Gemini API and returning mock questions.",
+      );
+      await new Promise((resolve) => setTimeout(resolve, 800)); // simulates network lag
+
+      const isEvaluating = answers && Object.keys(answers).length > 0;
+
+      // If user has already answered some questions, simulate finishing after a couple rounds
+      if (isEvaluating && Object.keys(answers).length >= 2) {
+        return NextResponse.json({ questions: [] });
+      }
+
+      return NextResponse.json({
+        questions: [
+          {
+            id: "location",
+            question: `Where in the city would you like to make this ${occasion.toLowerCase()} happen?`,
+            type: "text",
+          },
+          {
+            id: "vibe",
+            question:
+              "Should it be an intimate private setting or somewhere with a bit of energy?",
+            type: "text",
+          },
+          {
+            id: "budget",
+            question:
+              "Roughly how much would you like to spend on the surprise?",
+            type: "text",
+          },
+          {
+            id: "preferences",
+            question:
+              "Is there anything they especially love, or anything you definitely want to avoid?",
+            type: "text",
+          },
+        ],
+      });
+    }
+
+    // 2. STANDARD GEMINI API FLOW
     const isEvaluating = answers && Object.keys(answers).length > 0;
 
     const prompt = isEvaluating
