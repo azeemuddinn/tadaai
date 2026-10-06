@@ -3,46 +3,68 @@ import { GoogleGenAI } from "@google/genai";
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
+// Server-level cache state for final plan generation
+let quotaExhaustedUntil = 0;
+const FIFTEEN_HOURS_MS = 15 * 60 * 60 * 1000;
+
+function getMockPlanResponse(occasion: string, answers: any) {
+  const city = answers?.location || "Your City";
+  const budget = answers?.budget || "Flexible";
+  const cake = answers?.cake || "a custom favourite cake";
+
+  return {
+    title: `A Heartfelt ${occasion} Celebration`,
+    occasion: occasion,
+    city: city,
+    budget: budget,
+    total: budget,
+    items: [
+      [
+        "4:00 PM",
+        "The Prelude",
+        `Setting the stage in ${city} with careful pacing that matches the ${answers?.vibe || "intimate"} mood you wanted.`,
+      ],
+      [
+        "6:30 PM",
+        "The Reveal & Cake Moment",
+        `Unveiling the surprise moment, highlighted by bringing out ${cake} just at the right time.`,
+      ],
+      [
+        "8:30 PM",
+        "Evening Wind-down",
+        "A relaxed conclusion focused entirely on quality time and celebrating the occasion.",
+      ],
+    ],
+  };
+}
+
 export async function POST(req: Request) {
+  let occasion = "Celebration";
+  let answers = null;
+
   try {
-    const { idea, occasion, questions, answers } = await req.json();
+    const body = await req.json();
+    const idea = body.idea;
+    occasion = body.occasion || "Celebration";
+    const questions = body.questions;
+    answers = body.answers;
 
     // 1. LOCAL DEBUG FLAG BYPASS
     if (process.env.DEBUG_MOCK_AI === "true") {
-      console.log("🛠️️ [DEBUG MODE] Bypassing Gemini API for final plan.");
+      console.log("🛠 [DEBUG MODE] Bypassing Gemini API for final plan.");
       await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      const city = answers?.location || "Your City";
-      const budget = answers?.budget || "Flexible";
-      const cake = answers?.cake || "a custom favourite cake";
-
-      return NextResponse.json({
-        title: `A Heartfelt ${occasion} Celebration`,
-        occasion: occasion,
-        city: city,
-        budget: budget,
-        total: budget,
-        items: [
-          [
-            "4:00 PM",
-            "The Prelude",
-            `Setting the stage in ${city} with careful pacing that matches the ${answers?.vibe || "intimate"} mood you wanted.`,
-          ],
-          [
-            "6:30 PM",
-            "The Reveal & Cake Moment",
-            `Unveiling the surprise moment, highlighted by bringing out ${cake} just at the right time.`,
-          ],
-          [
-            "8:30 PM",
-            "Evening Wind-down",
-            "A relaxed conclusion focused entirely on quality time and celebrating the occasion.",
-          ],
-        ],
-      });
+      return NextResponse.json(getMockPlanResponse(occasion, answers));
     }
 
-    // 2. STANDARD GEMINI API FLOW WITH YOUR REFINED PROMPT
+    // 2. 15-HOUR QUOTA PAUSE CHECK
+    if (Date.now() < quotaExhaustedUntil) {
+      console.log(
+        "🛡️ [QUOTA PAUSE] Skipping Gemini for final plan due to recent 429 limit. Serving mock plan.",
+      );
+      return NextResponse.json(getMockPlanResponse(occasion, answers));
+    }
+
+    // 3. STANDARD GEMINI API FLOW WITH YOUR REFINED PROMPT
     const prompt = `
 You are Ta-da, a thoughtful surprise planning assistant.
 
@@ -113,13 +135,22 @@ Return ONLY valid JSON with this exact structure. Do not include markdown, expla
       .trim();
 
     const planData = JSON.parse(cleanJson);
-
     return NextResponse.json(planData);
-  } catch (error) {
-    console.error("Error in creating final plan:", error);
-    return NextResponse.json(
-      { error: "Failed to generate plan. Please try again." },
-      { status: 500 },
-    );
+  } catch (error: any) {
+    console.error("⚠️ Error in creating final plan:", error);
+
+    // If quota is exceeded (429), lock out Gemini calls for 15 hours
+    if (
+      error?.status === "RESOURCE_EXHAUSTED" ||
+      error?.message?.includes("429")
+    ) {
+      quotaExhaustedUntil = Date.now() + FIFTEEN_HOURS_MS;
+      console.log(
+        `🛑 Quota hit on final plan! Pausing Gemini calls for 15 hours.`,
+      );
+    }
+
+    // Gracefully fallback to mock plan instead of throwing 500 error
+    return NextResponse.json(getMockPlanResponse(occasion, answers));
   }
 }
