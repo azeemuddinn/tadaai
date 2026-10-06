@@ -1,6 +1,6 @@
 # Ta-da 🎉
 
-An agentic AI-powered surprise planning web application that helps users turn a simple idea into a thoughtful, personalized surprise plan.
+An agentic AI powered surprise planning web application that helps users turn a simple idea into a personalized surprise plan.
 
 Built with **Next.js**, **Google Gemini 2.5 Flash**, and **Tailwind CSS**.
 
@@ -8,13 +8,13 @@ Built with **Next.js**, **Google Gemini 2.5 Flash**, and **Tailwind CSS**.
 
 ## 🌟 Overview
 
-Planning a memorable surprise—whether it's a birthday, anniversary, proposal, date night, or personal milestone—can involve a surprising amount of thinking and coordination.
+Planning a memorable surprise for a birthday, anniversary, proposal, date night, or milestone can take a lot of planning.
 
 **Ta-da** starts with a simple idea.
 
-Instead of forcing the user through a fixed questionnaire, the AI analyzes what they've already shared, identifies the information that is actually missing, asks targeted questions, evaluates whether it has enough context, and then creates a personalized surprise plan.
+Instead of asking every user the same set of questions, the AI looks at what the user has already shared, identifies what information is missing, asks relevant questions, checks whether it has enough information, and then creates a personalized surprise plan.
 
-The core experience is:
+The basic flow is:
 
 **Tell → Ask → Understand → Plan**
 
@@ -23,36 +23,36 @@ The core experience is:
 ## ✨ Key Features
 
 * **Agentic Workflow Architecture**
-  Combines flexible AI decision-making with deterministic application guardrails. Gemini determines what information is missing and what questions are useful, while the application controls the workflow and stopping conditions.
+  Uses AI for flexible decision making while keeping the overall workflow controlled by the application.
 
 * **Dynamic Question Generation**
-  Questions are not simply hardcoded. The AI analyzes the user's initial idea and dynamically determines what additional information is needed.
+  Questions are generated based on the user's initial idea instead of using the same fixed questionnaire every time.
 
 * **Context Evaluation**
-  After collecting answers, the AI evaluates whether enough information exists to create a useful plan. A limited follow-up step can be used when an important detail is still missing.
+  After collecting answers, the AI checks whether there is enough information to create a useful plan. A limited follow up question can be asked when an important detail is missing.
 
 * **Personalized Surprise Plans**
-  Generates structured, time-based plans that reflect the user's occasion, idea, preferences, location, budget, and other details.
+  Generates structured, time based plans using information such as the occasion, idea, preferences, location, and budget.
 
-* **Graceful Development Fallback**
-  Includes a structured mock AI mode that allows the complete workflow and UI to be tested without consuming Gemini API quota during development.
+* **Development Mock Mode**
+  Includes a mock AI mode for testing the complete workflow without consuming Gemini API quota during development.
 
 * **Usage Guardrails**
-  The workflow is intentionally constrained to avoid unnecessary LLM calls and uncontrolled question loops.
+  Limits unnecessary AI calls and prevents the question flow from continuing indefinitely.
 
-* **Print & PDF Export**
-  Provides a print-optimized version of the final plan that can be saved as a PDF or printed.
+* **Print and PDF Export**
+  Provides a print friendly version of the final plan that can be saved as a PDF or printed.
 
 * **Instant Sharing**
-  Formats the generated timeline so it can easily be copied and shared through messaging apps.
+  Makes it easy to copy the generated timeline and share it through messaging apps.
 
 ---
 
 ## 🛠️ Tech Stack
 
-* **Framework:** [Next.js](https://nextjs.org/) with App Router
+* **Framework:** Next.js with App Router
 * **Language:** TypeScript
-* **AI Integration:** [Google Gemini 2.5 Flash](https://ai.google.dev/)
+* **AI:** Google Gemini 2.5 Flash
 * **AI SDK:** `@google/genai`
 * **Styling:** Tailwind CSS
 * **Deployment:** Vercel
@@ -61,7 +61,7 @@ The core experience is:
 
 ## 🧠 How the Agentic Workflow Works
 
-Ta-da is designed as an **agentic AI planning workflow**, rather than a simple chatbot.
+Ta-da is built as an agentic AI planning workflow rather than a simple chatbot.
 
 ```text
 User's Idea
@@ -74,27 +74,27 @@ Dynamic Questions
      ↓
 User Answers
      ↓
-AI Evaluates Context
+AI Checks the Context
      ↓
 Enough Information?
    ↙         ↘
  Yes          No
   ↓            ↓
-Create Plan   Limited Follow-up
+Create Plan   Follow Up
   ↓            ↓
   └──────→ Create Plan
 ```
 
-The application provides the rails:
+The application controls the main workflow:
 
-* Defined product scope
-* Structured inputs and outputs
-* Limited follow-up questions
-* Controlled workflow transitions
-* JSON-based AI responses
+* Product scope
+* Input and output structure
+* Question limits
+* Workflow transitions
+* JSON responses
 * Development mock mode
 
-Within those boundaries, the AI has flexibility to decide what information is important for each individual surprise.
+The AI decides what information is important for the specific surprise.
 
 ---
 
@@ -122,12 +122,12 @@ Within those boundaries, the AI has flexibility to decide what information is im
            │
            ↓
 ┌──────────────────────┐
-│ Structured JSON      │
-│ Questions / Plan     │
+│    Structured JSON   │
+│   Questions / Plan   │
 └──────────────────────┘
 ```
 
-The Gemini API key remains server-side and is never exposed directly to the browser.
+The Gemini API key stays on the server and is not exposed to the browser.
 
 ---
 
@@ -159,7 +159,7 @@ GEMINI_API_KEY=your_actual_gemini_api_key_here
 DEBUG_MOCK_AI=false
 ```
 
-Set `DEBUG_MOCK_AI=true` when you want to test the complete workflow without making Gemini API calls.
+Set `DEBUG_MOCK_AI=true` when you want to test the workflow without making Gemini API calls.
 
 ### 4. Run the Development Server
 
@@ -177,37 +177,37 @@ http://localhost:3000
 
 ## 💡 Engineering Highlights
 
-### AI with Deterministic Guardrails
+### AI with Application Guardrails
 
-Ta-da deliberately does not give the LLM unlimited control over the application flow.
+The AI does not control the entire application.
 
-The AI handles decisions such as:
+The AI handles things such as:
 
-* What information is missing?
-* Which questions are useful?
-* Is enough context available to create the plan?
-* How should the final plan reflect the user's intent?
+* What information is missing
+* Which questions are useful
+* Whether enough context is available
+* How the final plan should reflect the user's idea
 
 The application handles:
 
 * Workflow state
 * Question limits
 * Output structure
-* Scope boundaries
-* API usage controls
+* Scope
+* API usage
 * Final rendering
 
-This creates a balance between **AI flexibility and application reliability**.
+This keeps the AI flexible while keeping the application predictable.
 
-### Graceful Development Mode
+### Development Mock Mode
 
-Gemini API quotas can make rapid UI development difficult.
+Gemini API quotas can make development and UI testing difficult.
 
-Ta-da therefore includes a mock AI mode that simulates the AI workflow and network latency, allowing the entire experience to be tested without repeatedly consuming API quota.
+Ta-da includes a mock AI mode that simulates the workflow and network delay. This makes it possible to test the complete experience without using Gemini API quota.
 
-### Component State Machine
+### Frontend State Flow
 
-The frontend manages the user's journey through distinct stages:
+The frontend moves through a small number of defined stages:
 
 ```text
 Idea
@@ -223,17 +223,17 @@ Plan Generation
 Final Plan
 ```
 
-This keeps the user experience predictable while allowing the AI decisions inside the workflow to remain flexible.
+This keeps the UI predictable while the AI decides what questions are needed.
 
 ---
 
 ## 🎯 Project Goal
 
-Ta-da was built as an exploration of how **agentic AI can be applied to a focused consumer experience** without turning the product into a generic chatbot.
+Ta-da was built to explore how agentic AI can be used for a focused consumer experience instead of building another general purpose chatbot.
 
-The goal is simple:
+The idea is simple:
 
-> Give the AI a goal, give it boundaries, and let it figure out what it needs to accomplish that goal.
+> Give the AI a goal, give it boundaries, and let it figure out what information it needs to complete the goal.
 
 ---
 
