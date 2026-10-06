@@ -48,3 +48,25 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
 }
+@media print {
+  /* Hide the rest of the page body elements */
+  body * {
+    visibility: hidden;
+  }
+
+  /* Make only the plan container and its inner children visible */
+  .print-container, .print-container * {
+    visibility: visible;
+  }
+
+  /* Position the plan at the top left of the printed page */
+  .print-container {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    border: none !important;
+    box-shadow: none !important;
+    background: white !important;
+  }
+}

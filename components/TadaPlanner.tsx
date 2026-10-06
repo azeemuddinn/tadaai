@@ -612,7 +612,7 @@ export default function TadaPlanner() {
 
         {/* Step 4: Plan View */}
         {step === "plan" && (
-          <div className="bg-[var(--white)] border border-[var(--line)] shadow-[7px_8px_0_var(--paper2)] p-[31px_32px_29px] rounded-[4px] print:border-none print:shadow-none print:p-0">
+          <div className="print-container bg-[var(--white)] border border-[var(--line)] shadow-[7px_8px_0_var(--paper2)] p-[31px_32px_29px] rounded-[4px] print:border-none print:shadow-none print:p-0">
             {/* Header - visible in PDF */}
             <div className="flex justify-between items-center mb-[21px] text-[var(--coral)] text-[0.84rem] font-semibold uppercase">
               <span>Okay, I’ve got something for you.</span>
@@ -695,7 +695,22 @@ export default function TadaPlanner() {
                   <div className="flex flex-wrap items-center gap-[9px]">
                     <button
                       type="button"
-                      onClick={() => alert("Plan copied to clipboard!")}
+                      onClick={async () => {
+                        const textToCopy = `${activeOcc.title} in ${planData.city} (${planData.budget})`;
+                        if (navigator.share) {
+                          try {
+                            await navigator.share({
+                              title: activeOcc.title,
+                              text: textToCopy,
+                            });
+                            return;
+                          } catch (e) {
+                            // Fallback if user cancels share sheet
+                          }
+                        }
+                        navigator.clipboard.writeText(textToCopy);
+                        alert("Plan summary copied!");
+                      }}
                       className="min-h-[50px] px-[16px] border border-[var(--line)] bg-[var(--white)] text-[var(--ink)] font-bold rounded-[3px]"
                     >
                       Share plan
