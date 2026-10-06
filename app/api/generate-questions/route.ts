@@ -5,66 +5,39 @@ const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 export async function POST(req: Request) {
   try {
-    const { idea, occasion } = await req.json();
+    const { idea, occasion, answers } = await req.json();
 
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: `
+    const isEvaluating = answers && Object.keys(answers).length > 0;
+
+    const prompt = isEvaluating
+      ? `
 You are Ta-da, a thoughtful surprise planning assistant.
+Occasion: ${occasion}
+Initial Idea: "${idea}"
+Already Collected Answers: ${JSON.stringify(answers)}
 
-Your job is to help a user plan a meaningful surprise or memorable experience for another person.
+You have already asked questions and received these answers. 
+CRITICAL RULE: Be easily satisfied. Do NOT ask more than 1 additional follow-up question, and ONLY ask if something vital (like location or budget) is completely missing. 
+If you have enough to build a basic plan, return an empty questions array: {"questions": []}.
 
-USER INPUT
+Return ONLY valid JSON, no markdown:
+{
+  "questions": [
+    {
+      "id": "unique_field_name",
+      "question": "One final question if absolutely necessary",
+      "type": "text"
+    }
+  ]
+}
+`
+      : `
+You are Ta-da, a thoughtful surprise planning assistant.
 Occasion: ${occasion}
 Idea: "${idea}"
 
-YOUR TASK
-
-Analyze the user's idea carefully.
-
-First identify information that is already known from the user's message.
-Do NOT ask for information that has already been provided.
-
-Then determine the minimum additional information needed to create a thoughtful, realistic, personalized surprise plan.
-
-Generate 3 to 5 questions that will help gather that information.
-
-Questions must be:
-- Relevant to this specific surprise
-- Natural and conversational
-- Useful for creating the final plan
-- Adapted to the user's situation
-- One clear question at a time
-- Not repetitive
-- Not generic if the information is already known
-
-Consider information such as:
-- Who the surprise is for
-- Occasion
-- Date or timing
-- Location
-- Budget
-- Interests and preferences
-- Things to avoid
-- Available time
-- Important constraints
-
-You do NOT need to ask about every category.
-Only ask what is actually useful for this particular surprise.
-
-IMPORTANT:
-- The recipient can be anyone: spouse, partner, child, parent, friend, colleague, etc.
-- The occasion can be anything meaningful: birthday, anniversary, promotion, graduation, farewell, achievement, proposal, or something else.
-- Do not assume a relationship, occasion, budget, location, or preference.
-- Do not turn this into a general-purpose assistant.
-- Stay focused on planning surprises and memorable experiences.
-- If the user's request is clearly unrelated to surprise planning, return an empty questions array.
-
-Return ONLY valid JSON.
-Do not use markdown, code fences, or additional text.
-
-Return exactly this structure:
-
+Analyze the idea and generate at most 3 concise questions for missing vital info. 
+Return ONLY valid JSON with this exact structure, no markdown:
 {
   "questions": [
     {
@@ -74,7 +47,11 @@ Return exactly this structure:
     }
   ]
 }
-`,
+`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: prompt,
     });
 
     const text = response.text || "{}";
@@ -86,7 +63,7 @@ Return exactly this structure:
 
     return NextResponse.json(data);
   } catch (error) {
-    console.error("Error generating dynamic questions:", error);
-    return NextResponse.json({ questions: [] }, { status: 500 });
+    console.error("Error in AI evaluation:", error);
+    return NextResponse.json({ questions: [] });
   }
 }

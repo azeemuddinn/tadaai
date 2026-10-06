@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { z } from "zod";
 
 const ideaSchema = z
@@ -135,6 +135,25 @@ export default function TadaPlanner() {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [currentInput, setCurrentInput] = useState("");
 
+  // Friendly loading step indicator for animations
+  const [loadingStepIndex, setLoadingStepIndex] = useState(0);
+  const loadingMessages = [
+    "Reading between the lines of your idea...",
+    "Figuring out what makes them smile...",
+    "Crafting the perfect questions just for you...",
+    "Almost ready to wave the magic wand...",
+  ];
+
+  useEffect(() => {
+    let interval: any;
+    if (step === "thinking") {
+      interval = setInterval(() => {
+        setLoadingStepIndex((prev) => (prev + 1) % loadingMessages.length);
+      }, 900);
+    }
+    return () => clearInterval(interval);
+  }, [step]);
+
   const [planData, setPlanData] = useState({
     city: "Hyderabad",
     budget: "₹20,000",
@@ -144,7 +163,6 @@ export default function TadaPlanner() {
 
   const activeOcc = OCCURRENCES[selectedPill] || OCCURRENCES.Birthday;
 
-  // Handle Page 1 submission & call Gemini API for dynamic questions
   const handleIdeaSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -186,7 +204,7 @@ export default function TadaPlanner() {
     }
   };
 
-  const handleNextQuestion = () => {
+  const handleNextQuestion = async () => {
     if (!currentInput.trim()) return;
 
     const currentQ = questionsList[questionIndex];
@@ -195,11 +213,36 @@ export default function TadaPlanner() {
 
     if (questionIndex < questionsList.length - 1) {
       setQuestionIndex(questionIndex + 1);
-      // Load next answer if already filled, otherwise blank
       const nextQ = questionsList[questionIndex + 1];
       setCurrentInput(updatedAnswers[nextQ.id] || "");
     } else {
-      setStep("ready");
+      setStep("thinking");
+
+      try {
+        const res = await fetch("/api/generate-questions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            idea: ideaText.trim(),
+            occasion: selectedPill,
+            answers: updatedAnswers,
+          }),
+        });
+
+        const data = await res.json();
+
+        if (data && data.questions && data.questions.length > 0) {
+          setQuestionsList(data.questions);
+          setQuestionIndex(0);
+          setCurrentInput("");
+          setStep("question");
+        } else {
+          setStep("ready");
+        }
+      } catch (err) {
+        console.error(err);
+        setStep("ready");
+      }
     }
   };
 
@@ -228,8 +271,7 @@ export default function TadaPlanner() {
                 : "03"}
           </span>
           {step === "start" && "Start with an idea"}
-          {(step === "question" ||
-            (step === "thinking" && questionsList.length > 0)) &&
+          {(step === "question" || step === "thinking") &&
             "Personalizing details"}
           {step === "ready" && "Almost there"}
           {step === "plan" && "Your Ta-da"}
@@ -266,7 +308,7 @@ export default function TadaPlanner() {
           {step === "question" &&
             "Answering a few tailored questions helps craft the ideal experience."}
           {step === "thinking" &&
-            "Processing your details and crafting your unique experience..."}
+            "Brewing up something thoughtful and tailored..."}
           {step === "ready" &&
             "A few more seconds and you’ll have something worth making happen."}
           {step === "plan" &&
@@ -274,7 +316,7 @@ export default function TadaPlanner() {
         </p>
       </div>
 
-      {/* Right Stage Column */}
+      {/* Right Stage Column - Always keeps card container mounted to prevent layout jumps */}
       <div className="planner-stage min-w-0">
         {/* Step 1: Start View */}
         {step === "start" && (
@@ -341,6 +383,36 @@ export default function TadaPlanner() {
           </form>
         )}
 
+        {/* Loading / Thinking View (Keeps right-side container stable with nice animations) */}
+        {step === "thinking" && (
+          <div className="bg-[var(--white)] border border-[var(--line)] shadow-[7px_8px_0_var(--paper2)] p-[36px_32px] rounded-[4px] text-left transition-all duration-300">
+            <div className="flex justify-between items-center mb-[20px] text-[var(--coral)] text-[0.84rem] font-semibold uppercase tracking-wider">
+              <span>Ta-da Magic Box</span>
+              <span className="text-[var(--muted)] font-normal animate-pulse">
+                Thinking...
+              </span>
+            </div>
+
+            <div className="py-[32px] flex flex-col items-center justify-center text-center">
+              {/* Pulsing magical circle indicator */}
+              <div className="relative w-16 h-16 mb-6 flex items-center justify-center">
+                <div className="absolute inset-0 rounded-full bg-[var(--mango)] opacity-40 animate-ping" />
+                <div className="relative w-12 h-12 rounded-full bg-[var(--coral)] flex items-center justify-center text-[var(--white)] font-bold text-xl shadow-md">
+                  ✨
+                </div>
+              </div>
+
+              <h3 className="font-cormorant font-medium text-[2.2rem] text-[var(--ink)] mb-3 transition-all duration-500">
+                Building your experience…
+              </h3>
+
+              <p className="text-[var(--muted)] text-[1.05vrem] italic font-cormorant min-h-[30px] transition-opacity duration-300">
+                "{loadingMessages[loadingStepIndex]}"
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Step 2: Dynamic Question View */}
         {step === "question" && questionsList.length > 0 && (
           <div className="bg-[var(--white)] border border-[var(--line)] shadow-[7px_8px_0_var(--paper2)] p-[27px_29px_29px] rounded-[4px]">
@@ -396,40 +468,25 @@ export default function TadaPlanner() {
               >
                 ← Back
               </button>
-              <button
-                type="button"
-                disabled={!currentInput.trim()}
-                onClick={handleNextQuestion}
-                className="inline-flex items-center justify-center min-h-[50px] px-[18px] bg-[var(--sun)] text-[var(--white)] text-[0.92rem] font-bold rounded-[3px] disabled:opacity-45 disabled:cursor-not-allowed hover:bg-[var(--sun-deep)]"
-              >
-                Next
-              </button>
-            </div>
-          </div>
-        )}
 
-        {/* Loading / Thinking View */}
-        {step === "thinking" && questionsList.length === 0 && (
-          <div className="bg-[var(--white)] border border-[var(--line)] shadow-[7px_8px_0_var(--paper2)] p-[31px_32px_29px] rounded-[4px] text-left">
-            <div className="flex justify-between items-center mb-[17px] text-[var(--coral)] text-[0.84rem] font-semibold uppercase">
-              <span>Ta-da is analyzing</span>
-              <span className="text-[var(--muted)] font-normal">
-                One moment
-              </span>
+              <div className="flex items-center gap-4">
+                <button
+                  type="button"
+                  onClick={() => setStep("ready")}
+                  className="text-xs text-[var(--muted)] underline hover:text-[var(--ink)]"
+                >
+                  I'm done, show plan
+                </button>
+                <button
+                  type="button"
+                  disabled={!currentInput.trim()}
+                  onClick={handleNextQuestion}
+                  className="inline-flex items-center justify-center min-h-[50px] px-[18px] bg-[var(--sun)] text-[var(--white)] text-[0.92rem] font-bold rounded-[3px] disabled:opacity-45 disabled:cursor-not-allowed hover:bg-[var(--sun-deep)]"
+                >
+                  Next
+                </button>
+              </div>
             </div>
-            <h3 className="font-cormorant font-medium text-[2.25rem] text-[var(--ink)] mb-[24px]">
-              Reading your idea…
-            </h3>
-            <ul className="grid gap-[13px] m-0 p-0 list-none">
-              <li className="flex items-center gap-[10px] text-[var(--muted)] text-[0.95rem]">
-                <span className="w-[8px] h-[8px] rounded-full bg-[var(--coral)]" />{" "}
-                Parsing what you already know…
-              </li>
-              <li className="flex items-center gap-[10px] text-[var(--muted)] text-[0.95rem]">
-                <span className="w-[8px] h-[8px] rounded-full bg-[var(--coral)]" />{" "}
-                Generating personalized questions…
-              </li>
-            </ul>
           </div>
         )}
 
