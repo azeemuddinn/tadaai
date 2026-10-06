@@ -18,7 +18,7 @@ const manrope = Manrope({
 export const metadata: Metadata = {
   title: "Ta-da — Make it a moment they’ll remember.",
   description: "Thoughtful surprise plans for very good people.",
-  themeColor: "#ffeef2",
+  // themeColor: "#ffeef2",
 };
 
 export default function RootLayout({
