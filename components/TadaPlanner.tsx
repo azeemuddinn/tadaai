@@ -546,110 +546,102 @@ export default function TadaPlanner() {
           </div>
         )}
 
-        {/* Step 4: Plan View */}
-        {step === "plan" && (
-          <div className="bg-[var(--white)] border border-[var(--line)] shadow-[7px_8px_0_var(--paper2)] p-[31px_32px_29px] rounded-[4px]">
-            <div className="flex justify-between items-center mb-[21px] text-[var(--coral)] text-[0.84rem] font-semibold uppercase">
-              <span>Okay, I’ve got something for you.</span>
-              <span className="text-[var(--muted)] font-normal">
-                Ta-da plan
-              </span>
-            </div>
-            <h3 className="font-cormorant font-medium text-[2.7rem] text-[var(--ink)] mb-[8px]">
-              {activeOcc.title}
-            </h3>
-            <div className="flex flex-wrap gap-[7px_17px] mb-[24px] text-[var(--muted)] text-[0.9rem]">
-              <span>
-                <b>Occasion:</b> {selectedPill}
-              </span>
-              <span>
-                <b>Where:</b> {planData.city}
-              </span>
-              <span>
-                <b>Budget:</b> {planData.budget}
-              </span>
-            </div>
-            <div className="relative pl-[22px]">
-              <div className="absolute left-[4px] top-[24px] bottom-[24px] w-[1px] bg-[var(--coral)] opacity-40" />
-              {activeOcc.items.map(([time, title, desc], idx) => (
-                <div
-                  key={idx}
-                  className="relative grid grid-cols-[76px_1fr] py-[15px] border-t border-dashed border-[var(--line)] first:border-t-0"
-                >
-                  <div className="absolute -left-[22px] top-[21px] w-[9px] h-[9px] rounded-full bg-[var(--coral)]" />
-                  <time className="text-[var(--coral)] text-[0.85rem] font-bold pt-[2px]">
-                    {time}
-                  </time>
-                  <div>
-                    <h4 className="font-cormorant text-[1.6rem] text-[var(--ink)] m-0 mb-[3px]">
-                      {title}
-                    </h4>
-                    <p className="text-[var(--muted)] text-[0.92rem] leading-[1.45] m-0">
-                      {desc}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="flex justify-between mt-[20px] text-[var(--muted)] text-[0.92rem]">
-              <span>Estimated total</span>
-              <strong className="text-[var(--ink)] text-[0.95rem]">
-                {planData.total}
-              </strong>
-            </div>
-            {!isApproved ? (
-              <div className="flex justify-center gap-[9px] mt-[25px]">
-                <button
-                  type="button"
-                  onClick={() => setStep("question")}
-                  className="min-h-[50px] px-[16px] border border-[var(--line)] bg-[var(--white)] text-[var(--ink)] font-bold rounded-[3px] hover:border-[var(--coral)] hover:text-[var(--coral)]"
-                >
-                  Let me change something
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsApproved(true)}
-                  className="inline-flex items-center justify-center min-h-[50px] px-[18px] bg-[var(--sun)] text-[var(--white)] text-[0.92rem] font-bold rounded-[3px] hover:bg-[var(--sun-deep)]"
-                >
-                  Looks good
-                </button>
-              </div>
-            ) : (
-              <div className="mt-[18px] p-[16px_18px] rounded-[4px] bg-[var(--butter)] text-[var(--ink)] text-left">
-                <p className="font-cormorant text-[1.5rem] leading-[1.1] m-0 mb-[12px]">
-                  Lovely. Your plan is ready to make happen.
-                </p>
-                <div className="flex flex-wrap items-center gap-[9px]">
-                  <button
-                    type="button"
-                    onClick={() => alert("Plan copied to clipboard!")}
-                    className="min-h-[50px] px-[16px] border border-[var(--line)] bg-[var(--white)] text-[var(--ink)] font-bold rounded-[3px]"
-                  >
-                    Share plan
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => window.print()}
-                    className="min-h-[50px] px-[16px] border border-[var(--line)] bg-[var(--white)] text-[var(--ink)] font-bold rounded-[3px]"
-                  >
-                    Save as PDF
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsApproved(false);
-                      setStep("start");
-                      setIdeaText("");
-                    }}
-                    className="bg-transparent text-[var(--muted)] text-[0.88rem]"
-                  >
-                    Start over
-                  </button>
-                </div>
-              </div>
-            )}
+       {/* Step 4: Plan View */}
+{step === "plan" && (
+  <div className="bg-[var(--white)] border border-[var(--line)] shadow-[7px_8px_0_var(--paper2)] p-[31px_32px_29px] rounded-[4px] print:border-none print:shadow-none print:p-0">
+    
+    {/* Header - visible in PDF */}
+    <div className="flex justify-between items-center mb-[21px] text-[var(--coral)] text-[0.84rem] font-semibold uppercase">
+      <span>Okay, I’ve got something for you.</span>
+      <span className="text-[var(--muted)] font-normal">Ta-da plan</span>
+    </div>
+
+    <h3 className="font-cormorant font-medium text-[2.7rem] text-[var(--ink)] mb-[8px]">
+      {activeOcc.title}
+    </h3>
+
+    <div className="flex flex-wrap gap-[7px_17px] mb-[24px] text-[var(--muted)] text-[0.9rem]">
+      <span><b>Occasion:</b> {selectedPill}</span>
+      <span><b>Where:</b> {planData.city}</span>
+      <span><b>Budget:</b> {planData.budget}</span>
+    </div>
+
+    {/* Timeline items - visible in PDF */}
+    <div className="relative pl-[22px]">
+      <div className="absolute left-[4px] top-[24px] bottom-[24px] w-[1px] bg-[var(--coral)] opacity-40" />
+      {activeOcc.items.map(([time, title, desc], idx) => (
+        <div key={idx} className="relative grid grid-cols-[76px_1fr] py-[15px] border-t border-dashed border-[var(--line)] first:border-t-0">
+          <div className="absolute -left-[22px] top-[21px] w-[9px] h-[9px] rounded-full bg-[var(--coral)]" />
+          <time className="text-[var(--coral)] text-[0.85rem] font-bold pt-[2px]">{time}</time>
+          <div>
+            <h4 className="font-cormorant text-[1.6rem] text-[var(--ink)] m-0 mb-[3px]">{title}</h4>
+            <p className="text-[var(--muted)] text-[0.92rem] leading-[1.45] m-0">{desc}</p>
           </div>
-        )}
+        </div>
+      ))}
+    </div>
+
+    <div className="flex justify-between mt-[20px] text-[var(--muted)] text-[0.92rem]">
+      <span>Estimated total</span>
+      <strong className="text-[var(--ink)] text-[0.95rem]">{planData.total}</strong>
+    </div>
+
+    {/* Action buttons - HIDDEN IN PDF PRINT VIEW */}
+    <div className="print:hidden">
+      {!isApproved ? (
+        <div className="flex justify-center gap-[9px] mt-[25px]">
+          <button
+            type="button"
+            onClick={() => setStep("question")}
+            className="min-h-[50px] px-[16px] border border-[var(--line)] bg-[var(--white)] text-[var(--ink)] font-bold rounded-[3px] hover:border-[var(--coral)] hover:text-[var(--coral)]"
+          >
+            Let me change something
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsApproved(true)}
+            className="inline-flex items-center justify-center min-h-[50px] px-[18px] bg-[var(--sun)] text-[var(--white)] text-[0.92rem] font-bold rounded-[3px] hover:bg-[var(--sun-deep)]"
+          >
+            Looks good
+          </button>
+        </div>
+      ) : (
+        <div className="mt-[18px] p-[16px_18px] rounded-[4px] bg-[var(--butter)] text-[var(--ink)] text-left">
+          <p className="font-cormorant text-[1.5rem] leading-[1.1] m-0 mb-[12px]">
+            Lovely. Your plan is ready to make happen.
+          </p>
+          <div className="flex flex-wrap items-center gap-[9px]">
+            <button
+              type="button"
+              onClick={() => alert("Plan copied to clipboard!")}
+              className="min-h-[50px] px-[16px] border border-[var(--line)] bg-[var(--white)] text-[var(--ink)] font-bold rounded-[3px]"
+            >
+              Share plan
+            </button>
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className="min-h-[50px] px-[16px] border border-[var(--line)] bg-[var(--white)] text-[var(--ink)] font-bold rounded-[3px]"
+            >
+              Save as PDF
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setIsApproved(false);
+                setStep("start");
+                setIdeaText("");
+              }}
+              className="bg-transparent text-[var(--muted)] text-[0.88rem]"
+            >
+              Start over
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  </div>
+)}
       </div>
     </section>
   );
