@@ -51,6 +51,7 @@ export async function POST(req: Request) {
     }
 
     // 2. STANDARD GEMINI API FLOW
+    // 2. STANDARD GEMINI API FLOW
     const isEvaluating = answers && Object.keys(answers).length > 0;
 
     const prompt = isEvaluating
@@ -80,7 +81,7 @@ You are Ta-da, a thoughtful surprise planning assistant.
 Occasion: ${occasion}
 Idea: "${idea}"
 
-Analyze the idea and generate at most 3 concise questions for missing vital info. 
+Analyze the idea and dynamically decide how many concise questions are needed to gather any missing vital info. 
 Return ONLY valid JSON with this exact structure, no markdown:
 {
   "questions": [
