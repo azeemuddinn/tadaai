@@ -144,6 +144,35 @@ export default function TadaPlanner() {
     "Almost ready to wave the magic wand...",
   ];
 
+  const [creditsUsed, setCreditsUsed] = useState(0);
+  const [isLimitReached, setIsLimitReached] = useState(false);
+  useEffect(() => {
+    const today = new Date().toISOString().split("T")[0]; // "YYYY-MM-DD"
+    const storedData = localStorage.getItem("tada_daily_usage");
+
+    if (storedData) {
+      const { date, count } = JSON.parse(storedData);
+      if (date === today) {
+        setCreditsUsed(count);
+        if (count >= 2) {
+          setIsLimitReached(true);
+        }
+      } else {
+        // New day, reset counter
+        localStorage.setItem(
+          "tada_daily_usage",
+          JSON.stringify({ date: today, count: 0 }),
+        );
+      }
+    } else {
+      // First time user
+      localStorage.setItem(
+        "tada_daily_usage",
+        JSON.stringify({ date: today, count: 0 }),
+      );
+    }
+  }, []);
+
   useEffect(() => {
     let interval: any;
     if (step === "thinking") {
@@ -162,47 +191,73 @@ export default function TadaPlanner() {
   const [isApproved, setIsApproved] = useState(false);
 
   const activeOcc = OCCURRENCES[selectedPill] || OCCURRENCES.Birthday;
+ const handleIdeaSubmit = async (e: React.FormEvent) => {
+   e.preventDefault();
 
-  const handleIdeaSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+   // 1. CHECK & ENFORCE DAILY CREDIT LIMIT
+   const today = new Date().toISOString().split("T")[0]; // "YYYY-MM-DD"
+   const storedData = localStorage.getItem("tada_daily_usage");
+   let currentCount = 0;
 
-    const result = ideaSchema.safeParse(ideaText.trim());
-    if (!result.success) {
-      setErrorMsg(result.error.issues[0].message);
-      return;
-    }
-    setErrorMsg("");
-    setStep("thinking");
+   if (storedData) {
+     const parsed = JSON.parse(storedData);
+     if (parsed.date === today) {
+       currentCount = parsed.count;
+     }
+   }
 
-    try {
-      const res = await fetch("/api/generate-questions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idea: ideaText.trim(), occasion: selectedPill }),
-      });
+   if (currentCount >= 2) {
+     setErrorMsg(
+       "Daily limit reached (2 of 2 credits used). Please try again tomorrow.",
+     );
+     return;
+   }
 
-      const data = await res.json();
+   // 2. VALIDATION & STATE TRANSITION
+   const result = ideaSchema.safeParse(ideaText.trim());
+   if (!result.success) {
+     setErrorMsg(result.error.issues[0].message);
+     return;
+   }
+   setErrorMsg("");
+   setStep("thinking");
 
-      if (data && data.questions && data.questions.length > 0) {
-        setQuestionsList(data.questions);
-        setQuestionIndex(0);
-        setAnswers({});
-        setCurrentInput("");
-        setStep("question");
-      } else {
-        setStep("start");
-        setErrorMsg(
-          "The AI didn't return any questions. Try adding a bit more detail.",
-        );
-      }
-    } catch (err) {
-      console.error(err);
-      setStep("start");
-      setErrorMsg(
-        "Failed to connect to AI planner. Please check your connection.",
-      );
-    }
-  };
+   try {
+     const res = await fetch("/api/generate-questions", {
+       method: "POST",
+       headers: { "Content-Type": "application/json" },
+       body: JSON.stringify({ idea: ideaText.trim(), occasion: selectedPill }),
+     });
+
+     const data = await res.json();
+
+     if (data && data.questions && data.questions.length > 0) {
+       // 3. INCREMENT & SAVE CREDIT USAGE ONLY ON SUCCESSFUL API RESPONSE
+       const newCount = currentCount + 1;
+       localStorage.setItem(
+         "tada_daily_usage",
+         JSON.stringify({ date: today, count: newCount }),
+       );
+
+       setQuestionsList(data.questions);
+       setQuestionIndex(0);
+       setAnswers({});
+       setCurrentInput("");
+       setStep("question");
+     } else {
+       setStep("start");
+       setErrorMsg(
+         "The AI didn't return any questions. Try adding a bit more detail.",
+       );
+     }
+   } catch (err) {
+     console.error(err);
+     setStep("start");
+     setErrorMsg(
+       "Failed to connect to AI planner. Please check your connection.",
+     );
+   }
+ };
 
  const handleNextQuestion = async () => {
    if (!currentInput.trim()) return;
@@ -402,13 +457,22 @@ export default function TadaPlanner() {
                 </div>
               </div>
 
-              <div>
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
                 <button
                   type="submit"
-                  className="w-full md:w-auto inline-flex items-center justify-center gap-[11px] min-h-[50px] px-8 bg-[var(--sun)] text-[var(--white)] text-[0.92rem] font-bold rounded-[3px] hover:bg-[var(--sun-deep)] hover:-translate-y-[1px] transition"
+                  disabled={isLimitReached}
+                  className={`w-full md:w-auto inline-flex items-center justify-center gap-[11px] min-h-[50px] px-8 text-[var(--white)] text-[0.92rem] font-bold rounded-[3px] transition ${
+                    isLimitReached
+                      ? "bg-gray-400 cursor-not-allowed opacity-60"
+                      : "bg-[var(--sun)] hover:bg-[var(--sun-deep)] hover:-translate-y-[1px]"
+                  }`}
                 >
-                  Start planning
+                  {isLimitReached ? "Daily Limit Reached" : "Start planning"}
                 </button>
+
+                <span className="text-xs font-medium text-sun">
+                  {creditsUsed} of 2 free daily credits used
+                </span>
               </div>
             </div>
           </form>
@@ -546,102 +610,120 @@ export default function TadaPlanner() {
           </div>
         )}
 
-       {/* Step 4: Plan View */}
-{step === "plan" && (
-  <div className="bg-[var(--white)] border border-[var(--line)] shadow-[7px_8px_0_var(--paper2)] p-[31px_32px_29px] rounded-[4px] print:border-none print:shadow-none print:p-0">
-    
-    {/* Header - visible in PDF */}
-    <div className="flex justify-between items-center mb-[21px] text-[var(--coral)] text-[0.84rem] font-semibold uppercase">
-      <span>Okay, I’ve got something for you.</span>
-      <span className="text-[var(--muted)] font-normal">Ta-da plan</span>
-    </div>
+        {/* Step 4: Plan View */}
+        {step === "plan" && (
+          <div className="bg-[var(--white)] border border-[var(--line)] shadow-[7px_8px_0_var(--paper2)] p-[31px_32px_29px] rounded-[4px] print:border-none print:shadow-none print:p-0">
+            {/* Header - visible in PDF */}
+            <div className="flex justify-between items-center mb-[21px] text-[var(--coral)] text-[0.84rem] font-semibold uppercase">
+              <span>Okay, I’ve got something for you.</span>
+              <span className="text-[var(--muted)] font-normal">
+                Ta-da plan
+              </span>
+            </div>
 
-    <h3 className="font-cormorant font-medium text-[2.7rem] text-[var(--ink)] mb-[8px]">
-      {activeOcc.title}
-    </h3>
+            <h3 className="font-cormorant font-medium text-[2.7rem] text-[var(--ink)] mb-[8px]">
+              {activeOcc.title}
+            </h3>
 
-    <div className="flex flex-wrap gap-[7px_17px] mb-[24px] text-[var(--muted)] text-[0.9rem]">
-      <span><b>Occasion:</b> {selectedPill}</span>
-      <span><b>Where:</b> {planData.city}</span>
-      <span><b>Budget:</b> {planData.budget}</span>
-    </div>
+            <div className="flex flex-wrap gap-[7px_17px] mb-[24px] text-[var(--muted)] text-[0.9rem]">
+              <span>
+                <b>Occasion:</b> {selectedPill}
+              </span>
+              <span>
+                <b>Where:</b> {planData.city}
+              </span>
+              <span>
+                <b>Budget:</b> {planData.budget}
+              </span>
+            </div>
 
-    {/* Timeline items - visible in PDF */}
-    <div className="relative pl-[22px]">
-      <div className="absolute left-[4px] top-[24px] bottom-[24px] w-[1px] bg-[var(--coral)] opacity-40" />
-      {activeOcc.items.map(([time, title, desc], idx) => (
-        <div key={idx} className="relative grid grid-cols-[76px_1fr] py-[15px] border-t border-dashed border-[var(--line)] first:border-t-0">
-          <div className="absolute -left-[22px] top-[21px] w-[9px] h-[9px] rounded-full bg-[var(--coral)]" />
-          <time className="text-[var(--coral)] text-[0.85rem] font-bold pt-[2px]">{time}</time>
-          <div>
-            <h4 className="font-cormorant text-[1.6rem] text-[var(--ink)] m-0 mb-[3px]">{title}</h4>
-            <p className="text-[var(--muted)] text-[0.92rem] leading-[1.45] m-0">{desc}</p>
+            {/* Timeline items - visible in PDF */}
+            <div className="relative pl-[22px]">
+              <div className="absolute left-[4px] top-[24px] bottom-[24px] w-[1px] bg-[var(--coral)] opacity-40" />
+              {activeOcc.items.map(([time, title, desc], idx) => (
+                <div
+                  key={idx}
+                  className="relative grid grid-cols-[76px_1fr] py-[15px] border-t border-dashed border-[var(--line)] first:border-t-0"
+                >
+                  <div className="absolute -left-[22px] top-[21px] w-[9px] h-[9px] rounded-full bg-[var(--coral)]" />
+                  <time className="text-[var(--coral)] text-[0.85rem] font-bold pt-[2px]">
+                    {time}
+                  </time>
+                  <div>
+                    <h4 className="font-cormorant text-[1.6rem] text-[var(--ink)] m-0 mb-[3px]">
+                      {title}
+                    </h4>
+                    <p className="text-[var(--muted)] text-[0.92rem] leading-[1.45] m-0">
+                      {desc}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex justify-between mt-[20px] text-[var(--muted)] text-[0.92rem]">
+              <span>Estimated total</span>
+              <strong className="text-[var(--ink)] text-[0.95rem]">
+                {planData.total}
+              </strong>
+            </div>
+
+            {/* Action buttons - HIDDEN IN PDF PRINT VIEW */}
+            <div className="print:hidden">
+              {!isApproved ? (
+                <div className="flex justify-center gap-[9px] mt-[25px]">
+                  <button
+                    type="button"
+                    onClick={() => setStep("question")}
+                    className="min-h-[50px] px-[16px] border border-[var(--line)] bg-[var(--white)] text-[var(--ink)] font-bold rounded-[3px] hover:border-[var(--coral)] hover:text-[var(--coral)]"
+                  >
+                    Let me change something
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsApproved(true)}
+                    className="inline-flex items-center justify-center min-h-[50px] px-[18px] bg-[var(--sun)] text-[var(--white)] text-[0.92rem] font-bold rounded-[3px] hover:bg-[var(--sun-deep)]"
+                  >
+                    Looks good
+                  </button>
+                </div>
+              ) : (
+                <div className="mt-[18px] p-[16px_18px] rounded-[4px] bg-[var(--butter)] text-[var(--ink)] text-left">
+                  <p className="font-cormorant text-[1.5rem] leading-[1.1] m-0 mb-[12px]">
+                    Lovely. Your plan is ready to make happen.
+                  </p>
+                  <div className="flex flex-wrap items-center gap-[9px]">
+                    <button
+                      type="button"
+                      onClick={() => alert("Plan copied to clipboard!")}
+                      className="min-h-[50px] px-[16px] border border-[var(--line)] bg-[var(--white)] text-[var(--ink)] font-bold rounded-[3px]"
+                    >
+                      Share plan
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => window.print()}
+                      className="min-h-[50px] px-[16px] border border-[var(--line)] bg-[var(--white)] text-[var(--ink)] font-bold rounded-[3px]"
+                    >
+                      Save as PDF
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsApproved(false);
+                        setStep("start");
+                        setIdeaText("");
+                      }}
+                      className="bg-transparent text-[var(--muted)] text-[0.88rem]"
+                    >
+                      Start over
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      ))}
-    </div>
-
-    <div className="flex justify-between mt-[20px] text-[var(--muted)] text-[0.92rem]">
-      <span>Estimated total</span>
-      <strong className="text-[var(--ink)] text-[0.95rem]">{planData.total}</strong>
-    </div>
-
-    {/* Action buttons - HIDDEN IN PDF PRINT VIEW */}
-    <div className="print:hidden">
-      {!isApproved ? (
-        <div className="flex justify-center gap-[9px] mt-[25px]">
-          <button
-            type="button"
-            onClick={() => setStep("question")}
-            className="min-h-[50px] px-[16px] border border-[var(--line)] bg-[var(--white)] text-[var(--ink)] font-bold rounded-[3px] hover:border-[var(--coral)] hover:text-[var(--coral)]"
-          >
-            Let me change something
-          </button>
-          <button
-            type="button"
-            onClick={() => setIsApproved(true)}
-            className="inline-flex items-center justify-center min-h-[50px] px-[18px] bg-[var(--sun)] text-[var(--white)] text-[0.92rem] font-bold rounded-[3px] hover:bg-[var(--sun-deep)]"
-          >
-            Looks good
-          </button>
-        </div>
-      ) : (
-        <div className="mt-[18px] p-[16px_18px] rounded-[4px] bg-[var(--butter)] text-[var(--ink)] text-left">
-          <p className="font-cormorant text-[1.5rem] leading-[1.1] m-0 mb-[12px]">
-            Lovely. Your plan is ready to make happen.
-          </p>
-          <div className="flex flex-wrap items-center gap-[9px]">
-            <button
-              type="button"
-              onClick={() => alert("Plan copied to clipboard!")}
-              className="min-h-[50px] px-[16px] border border-[var(--line)] bg-[var(--white)] text-[var(--ink)] font-bold rounded-[3px]"
-            >
-              Share plan
-            </button>
-            <button
-              type="button"
-              onClick={() => window.print()}
-              className="min-h-[50px] px-[16px] border border-[var(--line)] bg-[var(--white)] text-[var(--ink)] font-bold rounded-[3px]"
-            >
-              Save as PDF
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setIsApproved(false);
-                setStep("start");
-                setIdeaText("");
-              }}
-              className="bg-transparent text-[var(--muted)] text-[0.88rem]"
-            >
-              Start over
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  </div>
-)}
+        )}
       </div>
     </section>
   );
