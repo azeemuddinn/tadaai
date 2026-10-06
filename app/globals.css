@@ -1,26 +1,50 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #ffeef2;
+  --foreground: #2a1320;
+  --paper: #ffeef2;
+  --paper2: #ffd5e2;
+  --ink: #2a1320;
+  --muted: #6b4b5a;
+  --sun: #c9255f;
+  --sun-deep: #a31a4e;
+  --mango: #f58ab0;
+  --coral: #c9255f;
+  --white: #fffafb;
+  --line: rgba(42, 19, 32, 0.2);
+  --butter: #f3e3a0;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-paper: var(--paper);
+  --color-paper2: var(--paper2);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-sun: var(--sun);
+  --color-sun-deep: var(--sun-deep);
+  --color-mango: var(--mango);
+  --color-coral: var(--coral);
+  --color-white: var(--white);
+  --color-butter: var(--butter);
+  --font-sans: var(--font-manrope), Arial, sans-serif;
+  --font-cormorant: var(--font-cormorant), Georgia, serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  pointer-events: none;
+  opacity: 0.045;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.72' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.36'/%3E%3C/svg%3E");
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
 }
